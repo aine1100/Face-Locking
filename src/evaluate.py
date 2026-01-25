@@ -147,7 +147,7 @@ def main():
     cfg = EvalConfig()
 
     embedder = ArcFaceEmbedderONNX(
-        model_path="models/embedder_arcface.onnx",
+        model_path="models/arcface.onnx",
         input_size=(112, 112),
         debug=False,
     )

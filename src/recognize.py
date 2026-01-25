@@ -130,7 +130,7 @@ def load_db_npz(db_path: Path) -> Dict[str, np.ndarray]:
 class ArcFaceEmbedderONNX:
     def __init__(
         self,
-        model_path: str = "models/embedder_arcface.onnx",
+        model_path: str = "models/arcface.onnx",
         input_size: Tuple[int, int] = (112, 112),
         debug: bool = False,
     ):
@@ -145,7 +145,8 @@ class ArcFaceEmbedderONNX:
             img = cv2.resize(img, (self.in_w, self.in_h))
         rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
         rgb = (rgb - 127.5) / 128.0
-        return np.transpose(rgb, (2, 0, 1))[None, ...]
+        # return np.transpose(rgb, (2, 0, 1))[None, ...]
+        return rgb[None, ...]
 
     def embed(self, img: np.ndarray) -> np.ndarray:
         x = self._preprocess(img)
@@ -242,6 +243,8 @@ class FaceDBMatcher:
             return MatchResult(None, 1.0, 0.0, False)
 
         sims = self.mat @ emb.reshape(-1, 1)
+        if sims.ndim > 1:
+            sims = sims.flatten()
         i = int(np.argmax(sims))
         sim = float(sims[i])
         dist = 1.0 - sim

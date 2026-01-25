@@ -181,7 +181,7 @@ def main():
 
     det = Haar5ptDetector(min_size=(70, 70), smooth_alpha=0.80, debug=False)
     emb = ArcFaceEmbedderONNX(
-        model_path="models/embedder_arcface.onnx",
+        model_path="models/arcface.onnx",
         input_size=(112, 112),
         debug=False,
     )

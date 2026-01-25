@@ -1,1 +1,14 @@
 venv
+
+# Data
+data/enroll/
+data/debug_aligned/
+data/db/
+
+# Models (optional, if you don't want to track large files)
+models/*.onnx
+
+# Python
+__pycache__/
+*.py[cod]
+models/arcface.onnx

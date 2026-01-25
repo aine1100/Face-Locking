@@ -42,7 +42,7 @@ class ArcFaceEmbedderONNX:
     
     def __init__(
     self,
-    model_path: str = "models/embedder_arcface.onnx",
+    model_path: str = "models/arcface.onnx",
     input_size: Tuple[int, int] = (112, 112),
     debug: bool = False,
 ):
@@ -61,7 +61,8 @@ class ArcFaceEmbedderONNX:
             aligned_bgr = cv2.resize(aligned_bgr, (self.in_w, self.in_h))
         rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB).astype(np.float32)
         rgb = (rgb - 127.5) / 128.0
-        x = np.transpose(rgb, (2, 0, 1))[None, ...]
+        # x = np.transpose(rgb, (2, 0, 1))[None, ...] # Old NCHW
+        x = rgb[None, ...] # New NHWC for this specific onnx model
         return x.astype(np.float32)
     
     @staticmethod
@@ -149,7 +150,7 @@ def main():
         debug=False,
     )
     emb_model = ArcFaceEmbedderONNX(
-        model_path="models/embedder_arcface.onnx",
+        model_path="models/arcface.onnx",
         debug=False,
     )
     

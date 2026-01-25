@@ -8,7 +8,7 @@ This avoids the bug in haar_5pt.py where the aligned window was shown
 only after the loop and using stale variables.
 
 Run:
-python -m src.align
+python -m src.align 
 
 Keys:
 q quit
@@ -31,7 +31,7 @@ def _put_text(img, text: str, xy=(10, 30), scale=0.8, thickness=2):
 def _safe_imshow(win: str, img: np.ndarray):
     if img is None:
         return
-cv2.imshow(win, img)
+    cv2.imshow(win, img)
 
 def main(
     cam_index: int = 0,
@@ -54,7 +54,7 @@ def main(
     fps_n = 0
     fps = 0.0
     print("align running. Press 'q' to quit, 's' to save aligned face.")
-while True:
+    while True:
         ok, frame = cap.read()
         if not ok:
             break
@@ -107,8 +107,8 @@ while True:
             cv2.imwrite(str(out_path), last_aligned)
             print(f"[align] saved: {out_path}")
             
-        cap.release()
-        cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
         
 if __name__ == "__main__":
     main()

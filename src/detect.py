@@ -7,12 +7,12 @@ def main():
         raise RuntimeError(f"Failed to load cascade: {cascade_path}")
     
     cap = cv2.VideoCapture(0)
-    if not cap.isOpen():
-        raise RuntimeError("Camera not opened. Trey camera index 0/1/2")
+    if not cap.isOpened():
+        raise RuntimeError("Camera not opened. Try camera index 0/1/2")
     
     print("Haar face detect (minimal). Press 'q' to quit.")
     while True:
-        ok, frane= cap.read()
+        ok, frame = cap.read()
         if not ok:
             break
 

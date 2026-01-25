@@ -18,7 +18,7 @@ IDX_NOSE_TIP = 1
 IDX_MOUTH_LEFT = 61
 IDX_MOUTH_RIGHT = 291
 def main():
-# Haar
+    # Haar
     cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     face = cv2.CascadeClassifier(cascade_path)
     if face.empty():
