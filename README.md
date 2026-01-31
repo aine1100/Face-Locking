@@ -1,6 +1,6 @@
-# Face Recognition with ONNX
+# Face Locking & Recognition with ONNX
 
-A real-time face recognition system using ONNX Runtime, OpenCV, and MediaPipe. The pipeline includes face detection (Haar Cascade), 5-point landmark extraction (MediaPipe FaceMesh), face alignment, and ArcFace embedding for recognition.
+A real-time face recognition and **face locking** system using ONNX Runtime, OpenCV, and MediaPipe. This system can lock onto a specific identity, track their consistent movement, detect actions (blinks, smiles), and log history automatically.
 
 ## Features
 
@@ -10,6 +10,9 @@ A real-time face recognition system using ONNX Runtime, OpenCV, and MediaPipe. T
 - **ArcFace embeddings** via ONNX Runtime (CPU-friendly)
 - **Face enrollment** with template storage
 - **Multi-face recognition** with configurable threshold
+- **Face Locking** - Focus and lock onto a specific identity
+- **Action Detection** - Detect blinks, smiles, and movements while locked
+- **History Logs** - Automatic recording of actions with timestamps
 
 ---
 
@@ -147,6 +150,25 @@ python -m src.recognize
 - `+`/`-` - Adjust distance threshold
 - `d` - Toggle debug overlay
 
+### Face Locking & Action Detection
+
+Lock onto a specific identity and track their actions (blinks, smiles, movements):
+
+```bash
+python -m src.locking
+```
+
+**Controls:**
+- `q` - Quit
+- `n` - Next enrolled identity
+- `p` - Previous enrolled identity
+
+**How it works:**
+1. **Selection**: Use `n`/`p` to select the person to lock.
+2. **Locking**: When the selected person is recognized, the system "locks" (green box).
+3. **Persistence**: The lock stays even if recognition fails briefly (up to 3 seconds), as long as the face is tracked.
+4. **Action Logging**: While locked, every blink, smile, or movement is saved to `data/history/<name>_history_<timestamp>.txt`.
+
 ---
 
 ## Pipeline Overview
@@ -202,7 +224,12 @@ face-recogn-onnx/
 │   ├── align.py                 # Face alignment demo
 │   ├── embed.py                 # Embedding visualization
 │   ├── enroll.py                # Face enrollment tool
-│   └── recognize.py             # Real-time recognition
+│   ├── recognize.py             # Real-time recognition
+│   └── locking.py               # Face locking & Action detection
+├── data/
+│   ├── db/                      # Enrolled face database
+│   ├── enroll/                  # Saved face crops per person
+│   └── history/                 # Action history logs (.txt)
 ├── requirements.txt
 └── README.md
 ```
