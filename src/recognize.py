@@ -139,6 +139,14 @@ class ArcFaceEmbedderONNX:
         self.sess = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
         self.in_name = self.sess.get_inputs()[0].name
         self.out_name = self.sess.get_outputs()[0].name
+        # V5: Lighting Robustness (CLAHE) - Must be consistent across system
+        self.clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+
+    def normalize_lighting(self, aligned_img: np.ndarray) -> np.ndarray:
+        """Apply CLAHE to improve feature extraction in bad lighting."""
+        yuv = cv2.cvtColor(aligned_img, cv2.COLOR_BGR2YUV)
+        yuv[:, :, 0] = self.clahe.apply(yuv[:, :, 0])
+        return cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR)
 
     def _preprocess(self, img: np.ndarray) -> np.ndarray:
         if img.shape[:2] != (self.in_h, self.in_w):
@@ -269,6 +277,9 @@ def main():
 
     print("Recognize: q quit | r reload | +/- thresh | d debug")
 
+    cv2.namedWindow("recognize", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("recognize", 1280, 720)
+
     show_debug = False
     while True:
         ok, frame = cap.read()
@@ -280,7 +291,10 @@ def main():
 
         for f in faces:
             aligned, _ = align_face_5pt(frame, f.kps, out_size=(112, 112))
-            emb = embedder.embed(aligned)
+            
+            # V5: Normalize lighting (Consistent with Lock/Enroll)
+            normalized = embedder.normalize_lighting(aligned)
+            emb = embedder.embed(normalized)
             mr = matcher.match(emb)
 
             color = (0, 255, 0) if mr.accepted else (0, 0, 255)

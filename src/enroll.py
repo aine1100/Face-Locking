@@ -106,12 +106,18 @@ def load_existing_samples_from_crops(
     crops = _list_existing_crops(person_dir, cfg.max_existing_crops)
     base: List[np.ndarray] = []
 
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     for p in crops:
         img = cv2.imread(str(p))
         if img is None:
             continue
         try:
-            r = emb.embed(img)
+            # Apply same lighting normalization as recognition (V5)
+            yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+            yuv[:, :, 0] = clahe.apply(yuv[:, :, 0])
+            norm_img = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR)
+            
+            r = emb.embed(norm_img)
             base.append(r.embedding)
         except Exception:
             continue
@@ -204,11 +210,12 @@ def main():
     auto = False
     last_auto = 0.0
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     if not cap.isOpened():
         raise RuntimeError("Failed to open camera.")
 
     cv2.namedWindow(cfg.window_main, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(cfg.window_main, 1280, 720) # Set a larger default size
     cv2.namedWindow(cfg.window_aligned, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(cfg.window_aligned, 240, 240)
 
@@ -251,7 +258,13 @@ def main():
             # auto capture
             now = time.time()
             if auto and aligned is not None and (now - last_auto) >= cfg.auto_capture_every_s:
-                r = emb.embed(aligned)
+                # V5: Normalize lighting before embedding (consistent with locking.py)
+                clahe_obj = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                yuv = cv2.cvtColor(aligned, cv2.COLOR_BGR2YUV)
+                yuv[:, :, 0] = clahe_obj.apply(yuv[:, :, 0])
+                norm_aligned = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR)
+                
+                r = emb.embed(norm_aligned)
                 new_samples.append(r.embedding)
                 last_auto = now
                 status_msg = f"Auto captured NEW ({len(new_samples)})"
@@ -290,6 +303,32 @@ def main():
                 msg=status_msg,
             )
 
+            # Auto-save once requirement met
+            total = len(base_samples) + len(new_samples)
+            if total >= cfg.samples_needed and len(new_samples) > 0:
+                # Automate the 's' key logic
+                all_samples = base_samples + new_samples
+                template = mean_embedding(all_samples)
+                db[name] = template
+                meta = {
+                    "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "embedding_dim": int(template.size),
+                    "names": sorted(db.keys()),
+                    "samples_existing_used": int(len(base_samples)),
+                    "samples_new_used": int(len(new_samples)),
+                    "samples_total_used": int(len(all_samples)),
+                    "note": "AUTOSAVED: Embeddings are L2-normalized vectors.",
+                }
+                save_db(cfg, db, meta)
+                print(f"AUTOSAVED '{name}' (Target {cfg.samples_needed} met)")
+                base_samples = all_samples.copy()
+                new_samples.clear()
+                # If we were in auto mode, we can now exit automatically
+                if auto:
+                    print(f"Enrollment for '{name}' completed successfully.")
+                    break
+                status_msg = f"AUTOSAVED '{name}'"
+
             cv2.imshow(cfg.window_main, vis)
 
             key = cv2.waitKey(1) & 0xFF
@@ -308,7 +347,13 @@ def main():
                 if aligned is None:
                     status_msg = "No face detected. Not captured."
                 else:
-                    r = emb.embed(aligned)
+                    # V5: Normalize lighting before embedding
+                    clahe_obj = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                    yuv = cv2.cvtColor(aligned, cv2.COLOR_BGR2YUV)
+                    yuv[:, :, 0] = clahe_obj.apply(yuv[:, :, 0])
+                    norm_aligned = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR)
+                    
+                    r = emb.embed(norm_aligned)
                     new_samples.append(r.embedding)
                     status_msg = f"Captured NEW ({len(new_samples)})"
 
@@ -333,17 +378,24 @@ def main():
                     "samples_existing_used": int(len(base_samples)),
                     "samples_new_used": int(len(new_samples)),
                     "samples_total_used": int(len(all_samples)),
-                    "note": "Embeddings are L2-normalized vectors. Matching uses cosine similarity.",
+                    "note": "MANUAL SAVE: Embeddings are L2-normalized vectors.",
                 }
 
                 save_db(cfg, db, meta)
-                status_msg = f"Saved '{name}' to DB. Total identities: {len(db)}"
+                status_msg = f"Saved '{name}' to DB. identities: {len(db)}"
                 print(status_msg)
 
                 base_samples = load_existing_samples_from_crops(cfg, emb, person_dir)
                 new_samples.clear()
+                status_msg = f"Saved '{name}' to DB. identities: {len(db)}"
 
     finally:
+        # Check for unsaved samples on exit
+        if new_samples and db is not None:
+             print(f"\n[WARNING] You have {len(new_samples)} unsaved samples for '{name}'.")
+             print("To save them to the database, you MUST press 's' before quitting.")
+             # We can't easily wait for key here without a window, so we just inform.
+        
         cap.release()
         cv2.destroyAllWindows()
 

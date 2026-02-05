@@ -4,6 +4,7 @@ venv
 data/enroll/
 data/debug_aligned/
 data/db/
+data/history/
 
 # Models (optional, if you don't want to track large files)
 models/*.onnx
